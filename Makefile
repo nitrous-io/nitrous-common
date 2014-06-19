@@ -6,10 +6,10 @@ WARN_COLOR=\033[33;01m
 all: test
 
 format:
-	go fmt ./...
+	goop go fmt ./...
 
 test:
 	@echo "$(OK_COLOR)==> Running...$(NO_COLOR)"
-	@ginkgo -r -trace -keepGoing
+	@goop exec ginkgo -r -trace -keepGoing
 
 .PHONY: all format test
