@@ -5,11 +5,15 @@ WARN_COLOR=\033[33;01m
 
 all: test
 
+deps:
+	@go get github.com/nitrous-io/goop
+	@goop install
+
 format:
-	goop go fmt ./...
+	@goop go fmt ./...
 
 test:
 	@echo "$(OK_COLOR)==> Running...$(NO_COLOR)"
 	@goop exec ginkgo -r -trace -keepGoing
 
-.PHONY: all format test
+.PHONY: all deps format test
