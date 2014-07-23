@@ -3,28 +3,23 @@ package sshkey
 import (
 	"bytes"
 	"crypto/md5"
-	"encoding/base64"
 	"errors"
 	"fmt"
-	"regexp"
+	"strings"
+
+	"code.google.com/p/go.crypto/ssh"
 )
 
 var ErrInvalidPublicKey = errors.New("sshkey: invalid public key")
 
-var pubkeyRe = regexp.MustCompile(`[a-zA-Z0-9\-]+\s+([a-zA-Z0-9+\/]+=*)(\s|$)`)
-
 func Md5Fingerprint(key string) (string, error) {
-	m := pubkeyRe.FindStringSubmatch(key)
-	if m == nil {
+	pk, _, _, _, err := ssh.ParseAuthorizedKey([]byte(strings.TrimSpace(key)))
+
+	if err != nil {
 		return "", ErrInvalidPublicKey
 	}
 
-	data, err := base64.StdEncoding.DecodeString(m[1])
-	if err != nil {
-		return "", err
-	}
-
-	md5sum := md5.Sum(data)
+	md5sum := md5.Sum(pk.Marshal())
 	buf := &bytes.Buffer{}
 	for _, v := range md5sum {
 		buf.WriteString(fmt.Sprintf("%02x:", v))
