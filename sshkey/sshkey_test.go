@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestServer(t *testing.T) {
+func Test(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "sshkey")
 }
