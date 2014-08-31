@@ -18,27 +18,40 @@ var DefaultClient = &Client{http.DefaultClient, ""}
 
 var ErrAuthTokenEmpty = errors.New("Auth token is not provided")
 
+type ErrResponse struct {
+	Hash        string `json:"error_hash"`
+	Description string `json:"error_description"`
+}
+
+func (e *ErrResponse) Error() string {
+	switch {
+	case e.Description != "":
+		return e.Description
+	case e.Hash != "":
+		return fmt.Sprintf("something went wrong (contact support with this error code: %s)", e.Hash)
+	default:
+		return "unknown error occurred"
+	}
+}
+
 // New returns a client that uses net/http's DefaultClient with the token given by authToken.
 // If AuthToken is an empty string, *Authed() calls will fail with a "must be logged in" error message
 func New(authToken string) *Client {
 	return &Client{http.DefaultClient, authToken}
 }
 
-// CheckResponse retrieves the error_description on error responses
+// CheckResponse retrieves the error_hash and error_description on error responses
 func CheckResponse(resp *http.Response, expectedCode int) error {
 	if resp.StatusCode == expectedCode {
 		return nil
 	}
-	j := map[string]interface{}{}
+	var j ErrResponse
 	err := json.NewDecoder(resp.Body).Decode(&j)
 	if err != nil {
 		return err
 	}
-	errDesc, ok := j["error_description"].(string)
-	if !ok {
-		return fmt.Errorf("Unknown error occurred")
-	}
-	return fmt.Errorf(errDesc)
+
+	return &j
 }
 
 func (c *Client) Get(urlStr string, params *url.Values) (*http.Response, error) {

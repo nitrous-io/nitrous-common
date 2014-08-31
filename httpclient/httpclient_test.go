@@ -174,4 +174,71 @@ var _ = Describe("httpclient", func() {
 		ItUsesHTTPVerb("PUT")
 		ItIncludesFormData()
 	})
+
+	Describe("CheckResponse()", func() {
+		Context("when expected response is received", func() {
+			BeforeEach(func() {
+				srv.AppendHandlers(
+					ghttp.RespondWith(http.StatusOK, ""),
+				)
+			})
+
+			It("returns nil", func() {
+				resp, err := c.Get(srv.URL(), nil)
+				Expect(err).To(BeNil())
+
+				errResponse := httpclient.CheckResponse(resp, http.StatusOK)
+				Expect(errResponse).To(BeNil())
+			})
+		})
+
+		Context("when an error response with a description is received", func() {
+			BeforeEach(func() {
+				srv.AppendHandlers(
+					ghttp.RespondWith(http.StatusInternalServerError,
+						`{ "error": "internal_server_error", "error_description": "some error occurred" }`),
+				)
+			})
+
+			It("returns ErrResponse with description", func() {
+				resp, err := c.Get(srv.URL(), nil)
+				Expect(err).To(BeNil())
+
+				errResponse := httpclient.CheckResponse(resp, http.StatusOK).(*httpclient.ErrResponse)
+				Expect(errResponse.Error()).To(Equal("some error occurred"))
+			})
+		})
+
+		Context("when an error response with a hash is received", func() {
+			BeforeEach(func() {
+				srv.AppendHandlers(
+					ghttp.RespondWith(http.StatusInternalServerError, `{ "error": "internal_server_error", "error_hash": "1234" }`),
+				)
+			})
+
+			It("returns ErrResponse with hash", func() {
+				resp, err := c.Get(srv.URL(), nil)
+				Expect(err).To(BeNil())
+
+				errResponse := httpclient.CheckResponse(resp, http.StatusOK).(*httpclient.ErrResponse)
+				Expect(errResponse.Error()).To(ContainSubstring("error hash: 1234"))
+			})
+		})
+
+		Context("when an error response without a description or a hash is received", func() {
+			BeforeEach(func() {
+				srv.AppendHandlers(
+					ghttp.RespondWith(http.StatusInternalServerError, `{ "error": "internal_server_error" }`),
+				)
+			})
+
+			It("returns ErrResponse with hash", func() {
+				resp, err := c.Get(srv.URL(), nil)
+				Expect(err).To(BeNil())
+
+				errResponse := httpclient.CheckResponse(resp, http.StatusOK).(*httpclient.ErrResponse)
+				Expect(errResponse.Error()).To(ContainSubstring("unknown error occurred"))
+			})
+		})
+	})
 })
