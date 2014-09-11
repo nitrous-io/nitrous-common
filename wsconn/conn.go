@@ -22,6 +22,8 @@ var (
 // Currently the connection is only used for sending text message i.e. (utf-8
 // encoded messages)
 type Conn struct {
+	MessageType int // look at websocket.TextMessage / BinaryMessage
+
 	*websocket.Conn
 	reader     io.Reader // cached reader, which is reset whenever the messages is EOF
 	writeWait  time.Duration
@@ -33,10 +35,11 @@ type Conn struct {
 
 func NewConnection(w *websocket.Conn) *Conn {
 	c := &Conn{
-		Conn:       w,
-		pongWait:   pongWait,
-		pingPeriod: pingPeriod,
-		writeWait:  writeWait,
+		Conn:        w,
+		pongWait:    pongWait,
+		pingPeriod:  pingPeriod,
+		writeWait:   writeWait,
+		MessageType: websocket.TextMessage,
 	}
 	c.pingpong()
 	return c
@@ -54,6 +57,7 @@ func NewConnectionHeartbeat(w *websocket.Conn, serverHeartbeat bool) *Conn {
 		pingPeriod:      pingPeriod,
 		writeWait:       writeWait,
 		serverHeartbeat: serverHeartbeat,
+		MessageType:     websocket.TextMessage,
 	}
 	c.pingpong()
 	return c
@@ -63,7 +67,7 @@ func (c *Conn) Write(b []byte) (int, error) {
 	if c.writeWait != 0 {
 		c.SetWriteDeadline(time.Now().Add(c.writeWait))
 	}
-	if err := c.WriteMessage(websocket.BinaryMessage, b); err != nil {
+	if err := c.WriteMessage(c.MessageType, b); err != nil {
 		return 0, err
 	}
 	return len(b), nil
@@ -75,8 +79,8 @@ func (c *Conn) Read(b []byte) (int, error) {
 		if err != nil {
 			return 0, err
 		}
-		if t != websocket.BinaryMessage {
-			log.Printf("ws: ignored non-binary message in stream")
+		if t != c.MessageType {
+			log.Printf("wsconn: ignored unknown message type. Got %d, wanted %d", t, c.MessageType)
 			return 0, nil
 		}
 		c.reader = r
