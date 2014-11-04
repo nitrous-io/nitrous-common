@@ -63,14 +63,11 @@ var _ = Describe("httpclient", func() {
 
 	ItHasSpecificHeader := func(k, v string) {
 		It(fmt.Sprintf("has header %s with value %s", k, v), func() {
-			vals := []string{v}
+			h := ghttp.VerifyHeaderKV(k, v)
 			if v == "" {
-				vals = nil
+				h = ghttp.VerifyHeader(http.Header{k: nil})
 			}
-			srv.AppendHandlers(
-				ghttp.VerifyHeader(http.Header{
-					k: vals,
-				}))
+			srv.AppendHandlers(h)
 			check()
 		})
 	}
