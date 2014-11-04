@@ -9,12 +9,20 @@ import (
 	"strings"
 )
 
+// a Client is a wrapper around http.Client that adds headers in Header to all
+// requests, and sends an fmt.Sprintf("Authorization: Bearer %s", AuthToken)
+// header
 type Client struct {
 	*http.Client
+	http.Header
 	AuthToken string
 }
 
-var DefaultClient = &Client{http.DefaultClient, ""}
+var DefaultClient = &Client{
+	Client:    http.DefaultClient,
+	AuthToken: "",
+	Header:    http.Header{},
+}
 
 var ErrAuthTokenEmpty = errors.New("Auth token is not provided")
 
@@ -37,7 +45,11 @@ func (e *ErrResponse) Error() string {
 // New returns a client that uses net/http's DefaultClient with the token given by authToken.
 // If AuthToken is an empty string, *Authed() calls will fail with a "must be logged in" error message
 func New(authToken string) *Client {
-	return &Client{http.DefaultClient, authToken}
+	return &Client{
+		Client:    http.DefaultClient,
+		AuthToken: authToken,
+		Header:    http.Header{},
+	}
 }
 
 // CheckResponse retrieves the error_hash and error_description on error responses
@@ -131,6 +143,7 @@ func (c *Client) PrepareRequest(method string, urlStr string, params *url.Values
 	if err != nil {
 		return nil, err
 	}
+	c.addHeaders(req)
 	return req, nil
 }
 
@@ -145,6 +158,10 @@ func (c *Client) PrepareFormRequest(method string, urlStr string, data *url.Valu
 	if err != nil {
 		return nil, err
 	}
+
+	c.addHeaders(req)
+
+	// Content-Type cannot be overridden via specifying default headers
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	return req, nil
 }
@@ -155,4 +172,12 @@ func (c *Client) DoAuthed(req *http.Request) (*http.Response, error) {
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.AuthToken))
 	return c.Do(req)
+}
+
+func (c *Client) addHeaders(req *http.Request) {
+	for k, vals := range c.Header {
+		for _, v := range vals {
+			req.Header.Add(k, v)
+		}
+	}
 }

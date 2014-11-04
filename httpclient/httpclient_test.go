@@ -1,6 +1,7 @@
 package httpclient_test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -55,6 +56,20 @@ var _ = Describe("httpclient", func() {
 			srv.AppendHandlers(
 				ghttp.VerifyHeader(http.Header{
 					"Authorization": nil,
+				}))
+			check()
+		})
+	}
+
+	ItHasSpecificHeader := func(k, v string) {
+		It(fmt.Sprintf("has header %s with value %s", k, v), func() {
+			vals := []string{v}
+			if v == "" {
+				vals = nil
+			}
+			srv.AppendHandlers(
+				ghttp.VerifyHeader(http.Header{
+					k: vals,
 				}))
 			check()
 		})
@@ -221,7 +236,7 @@ var _ = Describe("httpclient", func() {
 				Expect(err).To(BeNil())
 
 				errResponse := httpclient.CheckResponse(resp, http.StatusOK).(*httpclient.ErrResponse)
-				Expect(errResponse.Error()).To(ContainSubstring("error hash: 1234"))
+				Expect(errResponse.Error()).To(ContainSubstring("error code: 1234"))
 			})
 		})
 
@@ -239,6 +254,70 @@ var _ = Describe("httpclient", func() {
 				errResponse := httpclient.CheckResponse(resp, http.StatusOK).(*httpclient.ErrResponse)
 				Expect(errResponse.Error()).To(ContainSubstring("unknown error occurred"))
 			})
+		})
+	})
+
+	Describe("Passing custom headers", func() {
+		It("does not add headers when no headers are specified", func() {
+			srv.AppendHandlers(
+				func(w http.ResponseWriter, r *http.Request) {
+					// Go adds "User-Agent" and "Accept-Encoding" headers by default
+					Expect(r.Header).To(HaveLen(2), "extra headers received %+v", r.Header)
+				},
+			)
+			_, err := c.Get(srv.URL(), nil)
+			Expect(err).To(BeNil())
+		})
+
+		Context("form requests", func() {
+			BeforeEach(func() {
+				check = func() {
+					c.Header.Add("X-NITROUS-CUSTOM", "testing")
+					c.PutFormAuthed(srv.URL(), params)
+				}
+
+			})
+
+			ItHasSpecificHeader("X-NITROUS-CUSTOM", "testing")
+			ItHasAuthHeader()
+		})
+
+		Context("non-form requests", func() {
+			BeforeEach(func() {
+				check = func() {
+					c.Header.Add("X-NITROUS-CUSTOM", "testing")
+					c.Get(srv.URL(), params)
+				}
+			})
+
+			ItHasSpecificHeader("X-NITROUS-CUSTOM", "testing")
+			ItHasNoAuthHeader()
+		})
+
+		Context("removing previously added header", func() {
+			BeforeEach(func() {
+				check = func() {
+					c.Header.Add("DELETEME", "testing")
+					c.Header.Del("DELETEME")
+					c.Get(srv.URL(), params)
+				}
+			})
+
+			ItHasSpecificHeader("DELETEME", "")
+			ItHasNoAuthHeader()
+		})
+
+		Context("does not allow overriding of other functionality", func() {
+			BeforeEach(func() {
+				check = func() {
+					c.Header.Set("Authorization", "Attempt override")
+					c.Header.Set("Content-Type", "Attempt override")
+					c.PutFormAuthed(srv.URL(), params)
+				}
+			})
+
+			ItHasSpecificHeader("Content-Type", "application/x-www-form-urlencoded")
+			ItHasAuthHeader()
 		})
 	})
 })
