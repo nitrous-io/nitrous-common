@@ -55,71 +55,103 @@ func CheckResponse(resp *http.Response, expectedCode int) error {
 }
 
 func (c *Client) Get(urlStr string, params *url.Values) (*http.Response, error) {
-	return c.DoRequest("GET", urlStr, params)
+	return c.GetWithHeaders(urlStr, params, nil)
+}
+
+func (c *Client) GetWithHeaders(urlStr string, params *url.Values, headers http.Header) (*http.Response, error) {
+	return c.DoRequest("GET", urlStr, params, headers)
 }
 
 func (c *Client) Delete(urlStr string, params *url.Values) (*http.Response, error) {
-	return c.DoRequest("DELETE", urlStr, params)
+	return c.DeleteWithHeaders(urlStr, params, nil)
+}
+
+func (c *Client) DeleteWithHeaders(urlStr string, params *url.Values, headers http.Header) (*http.Response, error) {
+	return c.DoRequest("DELETE", urlStr, params, headers)
 }
 
 // http.Client already includes PostForm, but this is here for consistency
 func (c *Client) PostForm(urlStr string, data *url.Values) (*http.Response, error) {
-	return c.DoFormRequest("POST", urlStr, data)
+	return c.PostFormWithHeaders(urlStr, data, nil)
+}
+
+func (c *Client) PostFormWithHeaders(urlStr string, data *url.Values, headers http.Header) (*http.Response, error) {
+	return c.DoFormRequest("POST", urlStr, data, headers)
 }
 
 func (c *Client) PutForm(urlStr string, data *url.Values) (*http.Response, error) {
-	return c.DoFormRequest("PUT", urlStr, data)
+	return c.PutFormWithHeaders(urlStr, data, nil)
+}
+
+func (c *Client) PutFormWithHeaders(urlStr string, data *url.Values, headers http.Header) (*http.Response, error) {
+	return c.DoFormRequest("PUT", urlStr, data, headers)
 }
 
 func (c *Client) GetAuthed(urlStr string, params *url.Values) (*http.Response, error) {
-	return c.DoRequestAuthed("GET", urlStr, params)
+	return c.GetAuthedWithHeaders(urlStr, params, nil)
+}
+
+func (c *Client) GetAuthedWithHeaders(urlStr string, params *url.Values, headers http.Header) (*http.Response, error) {
+	return c.DoRequestAuthed("GET", urlStr, params, headers)
 }
 
 func (c *Client) DeleteAuthed(urlStr string, params *url.Values) (*http.Response, error) {
-	return c.DoRequestAuthed("DELETE", urlStr, params)
+	return c.DeleteAuthedWithHeaders(urlStr, params, nil)
+}
+
+func (c *Client) DeleteAuthedWithHeaders(urlStr string, params *url.Values, headers http.Header) (*http.Response, error) {
+	return c.DoRequestAuthed("DELETE", urlStr, params, headers)
 }
 
 func (c *Client) PostFormAuthed(urlStr string, data *url.Values) (*http.Response, error) {
-	return c.DoFormRequestAuthed("POST", urlStr, data)
+	return c.PostFormAuthedWithHeaders(urlStr, data, nil)
+}
+
+func (c *Client) PostFormAuthedWithHeaders(urlStr string, data *url.Values, headers http.Header) (*http.Response, error) {
+	return c.DoFormRequestAuthed("POST", urlStr, data, headers)
 }
 
 func (c *Client) PutFormAuthed(urlStr string, data *url.Values) (*http.Response, error) {
-	return c.DoFormRequestAuthed("PUT", urlStr, data)
+	return c.PutFormAuthedWithHeaders(urlStr, data, nil)
 }
 
-func (c *Client) DoRequest(method string, urlStr string, params *url.Values) (*http.Response, error) {
-	req, err := c.PrepareRequest(method, urlStr, params)
+func (c *Client) PutFormAuthedWithHeaders(urlStr string, data *url.Values, headers http.Header) (*http.Response, error) {
+	return c.DoFormRequestAuthed("PUT", urlStr, data, headers)
+}
+
+func (c *Client) DoRequest(method string, urlStr string, params *url.Values, headers http.Header) (*http.Response, error) {
+	req, err := c.PrepareRequest(method, urlStr, params, headers)
 	if err != nil {
 		return nil, err
 	}
 	return c.Do(req)
 }
 
-func (c *Client) DoFormRequest(method string, urlStr string, data *url.Values) (*http.Response, error) {
-	req, err := c.PrepareFormRequest(method, urlStr, data)
+func (c *Client) DoFormRequest(method string, urlStr string, data *url.Values, headers http.Header) (*http.Response, error) {
+	req, err := c.PrepareFormRequest(method, urlStr, data, headers)
 	if err != nil {
 		return nil, err
 	}
 	return c.Do(req)
 }
 
-func (c *Client) DoRequestAuthed(method string, urlStr string, params *url.Values) (*http.Response, error) {
-	req, err := c.PrepareRequest(method, urlStr, params)
+func (c *Client) DoRequestAuthed(method string, urlStr string, params *url.Values, headers http.Header) (*http.Response, error) {
+	req, err := c.PrepareRequest(method, urlStr, params, headers)
 	if err != nil {
 		return nil, err
 	}
 	return c.DoAuthed(req)
 }
 
-func (c *Client) DoFormRequestAuthed(method string, urlStr string, data *url.Values) (*http.Response, error) {
-	req, err := c.PrepareFormRequest(method, urlStr, data)
+func (c *Client) DoFormRequestAuthed(method string, urlStr string, data *url.Values, headers http.Header) (*http.Response, error) {
+	req, err := c.PrepareFormRequest(method, urlStr, data, headers)
 	if err != nil {
 		return nil, err
 	}
 	return c.DoAuthed(req)
 }
 
-func (c *Client) PrepareRequest(method string, urlStr string, params *url.Values) (*http.Request, error) {
+func (c *Client) PrepareRequest(method string, urlStr string, params *url.Values, headers http.Header) (*http.Request, error) {
 	u, err := url.Parse(urlStr)
 	if err != nil {
 		return nil, err
@@ -131,10 +163,15 @@ func (c *Client) PrepareRequest(method string, urlStr string, params *url.Values
 	if err != nil {
 		return nil, err
 	}
+	if headers != nil {
+		for k, _ := range headers {
+			req.Header.Set(k, headers.Get(k))
+		}
+	}
 	return req, nil
 }
 
-func (c *Client) PrepareFormRequest(method string, urlStr string, data *url.Values) (*http.Request, error) {
+func (c *Client) PrepareFormRequest(method string, urlStr string, data *url.Values, headers http.Header) (*http.Request, error) {
 	var body *strings.Reader
 	if data == nil {
 		body = strings.NewReader("")
@@ -146,6 +183,11 @@ func (c *Client) PrepareFormRequest(method string, urlStr string, data *url.Valu
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	if headers != nil {
+		for k, _ := range headers {
+			req.Header.Set(k, headers.Get(k))
+		}
+	}
 	return req, nil
 }
 
