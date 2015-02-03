@@ -221,7 +221,7 @@ var _ = Describe("httpclient", func() {
 				Expect(err).To(BeNil())
 
 				errResponse := httpclient.CheckResponse(resp, http.StatusOK).(*httpclient.ErrResponse)
-				Expect(errResponse.Error()).To(ContainSubstring("error hash: 1234"))
+				Expect(errResponse.Error()).To(ContainSubstring("something went wrong (contact support with this error code: 1234)"))
 			})
 		})
 
