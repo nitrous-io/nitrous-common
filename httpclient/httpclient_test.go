@@ -28,6 +28,10 @@ var _ = Describe("httpclient", func() {
 			"containers": {"arch", "ubuntu"},
 			"say":        {"hello world!"},
 		}
+		headers = http.Header{
+			"One": []string{"two"},
+			"A":   []string{"bc"},
+		}
 		check func()
 	)
 
@@ -95,6 +99,19 @@ var _ = Describe("httpclient", func() {
 		})
 	}
 
+	ItIncludesHeaders := func() {
+		It("includes headers", func() {
+			srv.AppendHandlers(
+				func(w http.ResponseWriter, r *http.Request) {
+					for k, _ := range headers {
+						Expect(r.Header.Get(k)).To(headers.Get(k))
+					}
+				},
+			)
+			check()
+		})
+	}
+
 	Describe("Get()", func() {
 		BeforeEach(func() {
 			check = func() { c.Get(srv.URL(), params) }
@@ -103,6 +120,17 @@ var _ = Describe("httpclient", func() {
 		ItHasNoAuthHeader()
 		ItUsesHTTPVerb("GET")
 		ItIncludesQueryString()
+	})
+
+	Describe("GetWithHeaders()", func() {
+		BeforeEach(func() {
+			check = func() { c.GetWithHeaders(srv.URL(), params, headers) }
+		})
+
+		ItHasNoAuthHeader()
+		ItUsesHTTPVerb("GET")
+		ItIncludesQueryString()
+		ItIncludesHeaders()
 	})
 
 	Describe("Delete()", func() {
@@ -115,6 +143,17 @@ var _ = Describe("httpclient", func() {
 		ItIncludesQueryString()
 	})
 
+	Describe("DeleteWithHeaders()", func() {
+		BeforeEach(func() {
+			check = func() { c.DeleteWithHeaders(srv.URL(), params, headers) }
+		})
+
+		ItHasNoAuthHeader()
+		ItUsesHTTPVerb("DELETE")
+		ItIncludesQueryString()
+		ItIncludesHeaders()
+	})
+
 	Describe("PostForm()", func() {
 		BeforeEach(func() {
 			check = func() { c.PostForm(srv.URL(), params) }
@@ -123,6 +162,17 @@ var _ = Describe("httpclient", func() {
 		ItHasNoAuthHeader()
 		ItUsesHTTPVerb("POST")
 		ItIncludesFormData()
+	})
+
+	Describe("PostFormWithHeaders()", func() {
+		BeforeEach(func() {
+			check = func() { c.PostFormWithHeaders(srv.URL(), params, headers) }
+		})
+
+		ItHasNoAuthHeader()
+		ItUsesHTTPVerb("POST")
+		ItIncludesFormData()
+		ItIncludesHeaders()
 	})
 
 	Describe("PutForm()", func() {
@@ -135,6 +185,17 @@ var _ = Describe("httpclient", func() {
 		ItIncludesFormData()
 	})
 
+	Describe("PutFormWithHeaders()", func() {
+		BeforeEach(func() {
+			check = func() { c.PutFormWithHeaders(srv.URL(), params, headers) }
+		})
+
+		ItHasNoAuthHeader()
+		ItUsesHTTPVerb("PUT")
+		ItIncludesFormData()
+		ItIncludesHeaders()
+	})
+
 	Describe("GetAuthed()", func() {
 		BeforeEach(func() {
 			check = func() { c.GetAuthed(srv.URL(), params) }
@@ -143,6 +204,17 @@ var _ = Describe("httpclient", func() {
 		ItHasAuthHeader()
 		ItUsesHTTPVerb("GET")
 		ItIncludesQueryString()
+	})
+
+	Describe("GetAuthedWithHeaders()", func() {
+		BeforeEach(func() {
+			check = func() { c.GetAuthedWithHeaders(srv.URL(), params, headers) }
+		})
+
+		ItHasAuthHeader()
+		ItUsesHTTPVerb("GET")
+		ItIncludesQueryString()
+		ItIncludesHeaders()
 	})
 
 	Describe("DeleteAuthed()", func() {
@@ -155,6 +227,17 @@ var _ = Describe("httpclient", func() {
 		ItIncludesQueryString()
 	})
 
+	Describe("DeleteAuthedWithHeaders()", func() {
+		BeforeEach(func() {
+			check = func() { c.DeleteAuthedWithHeaders(srv.URL(), params, headers) }
+		})
+
+		ItHasAuthHeader()
+		ItUsesHTTPVerb("DELETE")
+		ItIncludesQueryString()
+		ItIncludesHeaders()
+	})
+
 	Describe("PostFormAuthed()", func() {
 		BeforeEach(func() {
 			check = func() { c.PostFormAuthed(srv.URL(), params) }
@@ -165,6 +248,17 @@ var _ = Describe("httpclient", func() {
 		ItIncludesFormData()
 	})
 
+	Describe("PostFormAuthedWithHeaders()", func() {
+		BeforeEach(func() {
+			check = func() { c.PostFormAuthedWithHeaders(srv.URL(), params, headers) }
+		})
+
+		ItHasAuthHeader()
+		ItUsesHTTPVerb("POST")
+		ItIncludesFormData()
+		ItIncludesHeaders()
+	})
+
 	Describe("PutFormAuthed()", func() {
 		BeforeEach(func() {
 			check = func() { c.PutFormAuthed(srv.URL(), params) }
@@ -173,6 +267,17 @@ var _ = Describe("httpclient", func() {
 		ItHasAuthHeader()
 		ItUsesHTTPVerb("PUT")
 		ItIncludesFormData()
+	})
+
+	Describe("PutFormAuthedWithHeaders()", func() {
+		BeforeEach(func() {
+			check = func() { c.PutFormAuthedWithHeaders(srv.URL(), params, headers) }
+		})
+
+		ItHasAuthHeader()
+		ItUsesHTTPVerb("PUT")
+		ItIncludesFormData()
+		ItIncludesHeaders()
 	})
 
 	Describe("CheckResponse()", func() {
@@ -221,7 +326,7 @@ var _ = Describe("httpclient", func() {
 				Expect(err).To(BeNil())
 
 				errResponse := httpclient.CheckResponse(resp, http.StatusOK).(*httpclient.ErrResponse)
-				Expect(errResponse.Error()).To(ContainSubstring("error hash: 1234"))
+				Expect(errResponse.Error()).To(ContainSubstring("something went wrong (contact support with this error code: 1234)"))
 			})
 		})
 
