@@ -16,7 +16,7 @@ var (
 	pongWait = 30 * time.Second
 
 	// Pings are sent to the client with this period.
-	pingPeriod = (pongWait * 9) / 10
+	pingPeriod = 25 * time.Second
 )
 
 // Currently the connection is only used for sending text message i.e. (utf-8
