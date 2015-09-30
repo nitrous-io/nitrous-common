@@ -98,19 +98,6 @@ func (c *Conn) Read(b []byte) (int, error) {
 	return n, nil
 }
 
-// This masks the embedded websocket.Conn's ReadMessage() method.
-func (c *Conn) ReadMessage() ([]byte, error) {
-	msgType, msg, err := c.Conn.ReadMessage()
-	if err != nil {
-		return nil, err
-	}
-	if msgType != c.MessageType {
-		return nil, nil
-	}
-
-	return msg, nil
-}
-
 func (c *Conn) Close() error {
 	c.SetWriteDeadline(time.Now().Add(c.writeWait))
 	c.WriteMessage(websocket.CloseMessage, []byte{})
